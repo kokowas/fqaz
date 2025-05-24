@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>سورة الزلزلة - تلاوة وتعرف صوتي (بدون تشكيل)</title>
+    <style>
+        @font-face {
+            font-family: 'HafsFont';
+            src: url('conv_original-hafs.otf') format('opentype');
+            font-weight: normal;
+            font-style: normal;
+        }
+
+        body {
+            font-family: 'HafsFont', Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+            direction: rtl;
+            background-color: #f4f4f4;
+            margin: 0;
+        }
+
+        h1 {
+            font-size: 2.2em;
+            color: #333;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+        #speechStatus {
+            font-size: 1em;
+            color: #555;
+            min-height: 1.5em;
+            margin-bottom: 15px;
+        }
+
+        .bismillah-container {
+            text-align: center;
+            margin-bottom: 0.5em;
+        }
+
+        #sentence {
+            font-size: 30px;
+            line-height: 2.5;
+            max-width: 800px;
+            margin: 20px auto;
+            text-align: right;
+            padding: 15px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        #sentence > span:not(.ayah-number),
+        .bismillah-container > span {
+            display: inline-block;
+            padding: 1px 3px;
+            margin: 0 1px;
+            border-radius: 3px;
+            vertical-align: baseline;
+            transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out;
+            visibility: hidden;
+        }
+
+        .highlight {
+            visibility: visible !important;
+            background-color: #00ff84;
+            color: #000;
+        }
+
+        .spoken {
+            visibility: visible !important;
+            background-color: #c8f7dc;
+            color: #333;
+        }
+        .revealed {
+            visibility: visible !important;
+        }
+
+        .controls button {
+            padding: 10px 20px;
+            font-size: 24px;
+            cursor: pointer;
+            border: none;
+            background: #007BFF;
+            color: white;
+            border-radius: 10px;
+            margin: 10px 5px;
+            min-width: 150px;
+            line-height: 1.2;
+            transition: background-color 0.3s ease;
+        }
+        .controls button:hover {
+            background: #0056b3;
+        }
+        .controls button#resetButton {
+            background-color: #6c757d;
+        }
+        .controls button#resetButton:hover {
+            background-color: #5a6268;
+        }
+
+        .ayah-number {
+            color: #007BFF;
+            font-size: 0.8em;
+            margin: 0 5px;
+            display: inline;
+            visibility: visible !important;
+        }
+
+        @media (max-width: 768px) { /* ... styles ... */ }
+        @media (max-width: 480px) { /* ... styles ... */ }
+    </style>
+</head>
+<body>
+
+    <h1>سورة الزلزلة</h1>
+    <div id="speechStatus">اضغط "ابدأ" وتحدث</div>
+
+    <div class="controls">
+        <button id="speechButton" onclick="toggleSpeechRecognition()">🎤 ابدأ التحدث</button>
+        <button id="resetButton" onclick="resetActivity()">🔄 إعادة</button>
+    </div>
+
+    <div id="sentence">
+        <div class="bismillah-container">
+            <span>بسم</span> <span>الله</span> <span>الرحمن</span> <span>الرحيم</span>
+        </div>
+        <span>اذا</span> <span>زلزلت</span> <span>الارض</span> <span>زلزالها</span><span class="ayah-number">۝١</span>
+        <span>واخرجت</span> <span>الارض</span> <span>اثقالها</span><span class="ayah-number">۝٢</span>
+        <span>وقال</span> <span>الانسان</span> <span>ما</span> <span>لها</span><span class="ayah-number">۝٣</span>
+        <span>يومئذ</span> <span>تحدث</span> <span>اخبارها</span><span class="ayah-number">۝٤</span>
+        <span>بان</span> <span>ربك</span> <span>اوحى</span> <span>لها</span><span class="ayah-number">۝٥</span>
+        <span>يومئذ</span> <span>يصدر</span> <span>الناس</span> <span>اشتاتا</span> <span>ليروا</span> <span>اعمالهم</span><span class="ayah-number">۝٦</span>
+        <span>فمن</span> <span>يعمل</span> <span>مثقال</span> <span>ذرة</span> <span>خيرا</span> <span>يره</span><span class="ayah-number">۝٧</span>
+        <span>ومن</span> <span>يعمل</span> <span>مثقال</span> <span>ذرة</span> <span>شرا</span> <span>يره</span><span class="ayah-number">۝٨</span>
+    </div>
+
+<script>
+    const speechButton = document.getElementById("speechButton");
+    const speechStatus = document.getElementById("speechStatus");
+    const sentenceContainer = document.getElementById("sentence");
+    const wordSpans = Array.from(
+        sentenceContainer.querySelectorAll('#sentence > span:not(.ayah-number), .bismillah-container > span')
+    );
+
+    let currentWordIndex = 0;
+    let isRecognizing = false;
+    let accumulatedFinalTranscript = ""; // To accumulate final results in continuous mode
+
+    function normalizeArabic(text) {
+        if (!text) return "";
+        text = text.replace(/[إأآٱ]/g, "ا");
+        text = text.replace(/ى/g, "ي");
+        text = text.replace(/ؤ/g, "و");
+        text = text.replace(/ئ/g, "ي");
+        text = text.replace(/ة/g, "ه");
+        return text.trim();
+    }
+
+    wordSpans.forEach(span => {
+        const normalizedText = normalizeArabic(span.textContent);
+        span.dataset.word = normalizedText;
+    });
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let recognition;
+
+    if (SpeechRecognition) {
+        recognition = new SpeechRecognition();
+        recognition.continuous = true; // Keep listening
+        recognition.interimResults = true; // Get interim results
+        recognition.lang = 'ar-SA';
+
+        recognition.onstart = () => {
+            isRecognizing = true;
+            accumulatedFinalTranscript = ""; // Reset accumulator on start
+            speechButton.textContent = "🔴 جاري الاستماع...";
+            speechStatus.textContent = "تحدث الآن...";
+            speechButton.style.backgroundColor = '#dc3545';
+        };
+
+        recognition.onend = () => {
+            isRecognizing = false;
+            speechButton.textContent = "🎤 ابدأ التحدث";
+            speechButton.style.backgroundColor = '#007BFF';
+            // Only update status if not completed
+            if (currentWordIndex < wordSpans.length) {
+                 speechStatus.textContent = "اضغط \"ابدأ\" وتحدث";
+            } else {
+                 speechStatus.textContent = "أحسنت! مكتمل. اضغط للبدء من جديد.";
+            }
+        };
+
+        recognition.onerror = (event) => {
+            console.error("Speech recognition error:", event.error);
+            let errorMsg = "حدث خطأ: " + event.error;
+            if (event.error === 'no-speech') errorMsg = "لم يتم اكتشاف أي كلام. حاول مرة أخرى.";
+            else if (event.error === 'audio-capture') errorMsg = "مشكلة في الميكروفون. تحقق من الأذونات.";
+            else if (event.error === 'not-allowed') errorMsg = "تم رفض إذن استخدام الميكروفون.";
+            else if (event.error === 'network') errorMsg = "مشكلة في الشبكة. حاول لاحقاً.";
+            
+            speechStatus.textContent = errorMsg;
+            isRecognizing = false;
+            speechButton.textContent = "🎤 ابدأ التحدث";
+            speechButton.style.backgroundColor = '#007BFF';
+        };
+
+        recognition.onresult = (event) => {
+            let interimTranscript = '';
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+                const transcriptPart = event.results[i][0].transcript;
+                if (event.results[i].isFinal) {
+                    accumulatedFinalTranscript += transcriptPart + " "; // Add space
+                } else {
+                    interimTranscript += transcriptPart;
+                }
+            }
+            
+            if (interimTranscript) {
+                speechStatus.textContent = "لحظة... " + interimTranscript;
+            }
+
+            // Process the accumulated final transcript
+            if (accumulatedFinalTranscript && currentWordIndex < wordSpans.length) {
+                const wordsToProcess = accumulatedFinalTranscript.trim().split(" ");
+                accumulatedFinalTranscript = ""; // Clear after processing this batch
+
+                for (let spokenWord of wordsToProcess) {
+                    if (currentWordIndex >= wordSpans.length) break; // All words matched
+
+                    const normalizedSpokenWord = normalizeArabic(spokenWord);
+                    const targetWordSpan = wordSpans[currentWordIndex];
+                    const targetWordText = targetWordSpan.dataset.word;
+
+                    // console.log(`Comparing: Spoken="${normalizedSpokenWord}" with Target="${targetWordText}" (idx: ${currentWordIndex})`);
+
+                    if (normalizedSpokenWord && targetWordText && normalizedSpokenWord === targetWordText) {
+                        const previouslyHighlighted = document.querySelector('#sentence .highlight');
+                        if (previouslyHighlighted && previouslyHighlighted !== targetWordSpan) {
+                            previouslyHighlighted.classList.remove('highlight');
+                            previouslyHighlighted.classList.add('spoken');
+                        }
+                        targetWordSpan.classList.remove('spoken');
+                        targetWordSpan.classList.add('highlight');
+                        currentWordIndex++;
+                        
+                        if (currentWordIndex < wordSpans.length) {
+                             speechStatus.textContent = "الكلمة التالية...";
+                        }
+                    } else if (normalizedSpokenWord && targetWordText && normalizedSpokenWord !== "") {
+                        // Optional: Handle mismatch, e.g., visual feedback or just ignore
+                        // console.log(`Mismatch: Spoken="${normalizedSpokenWord}", Target="${targetWordText}"`);
+                        // If a mismatch occurs, we might want to stop processing this batch of `wordsToProcess`
+                        // to avoid cascading errors if the user mispronounced or said something unexpected.
+                        // For now, it will continue trying to match subsequent spoken words in this batch.
+                        // To be stricter, you could 'break;' here.
+                    }
+                }
+
+                if (currentWordIndex >= wordSpans.length) {
+                    speechStatus.textContent = "أحسنت! لقد أكملت السورة.";
+                    if (isRecognizing) recognition.stop(); // Stop fully at the end
+                    // isRecognizing will be set to false by onend
+                }
+            }
+        };
+
+    } else { /* ... no speech recognition support ... */ }
+
+    function toggleSpeechRecognition() {
+        if (!SpeechRecognition) return;
+        if (isRecognizing) {
+            recognition.stop();
+        } else {
+            if (currentWordIndex >= wordSpans.length) resetActivity();
+            try {
+                recognition.start();
+            } catch (e) {
+                console.error("Error starting recognition:", e);
+                speechStatus.textContent = "خطأ في بدء التعرف. حاول مرة أخرى.";
+                isRecognizing = false;
+                speechButton.textContent = "🎤 ابدأ التحدث";
+                speechButton.style.backgroundColor = '#007BFF';
+            }
+        }
+    }
+
+    function resetActivity() {
+        currentWordIndex = 0;
+        accumulatedFinalTranscript = "";
+        wordSpans.forEach(span => {
+            span.style.visibility = 'hidden';
+            span.classList.remove('highlight', 'spoken', 'revealed');
+        });
+        speechStatus.textContent = "اضغط \"ابدأ\" وتحدث";
+        if (isRecognizing) {
+            recognition.stop(); // Will trigger onend to update UI
+        } else {
+            // Ensure UI is reset if not recognizing
+            isRecognizing = false;
+            speechButton.textContent = "🎤 ابدأ التحدث";
+            speechButton.style.backgroundColor = '#007BFF';
+        }
+    }
+    resetActivity();
+</script>
+</body>
+</html>
